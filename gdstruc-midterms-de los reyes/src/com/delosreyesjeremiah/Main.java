@@ -8,7 +8,10 @@ public class Main {
 
     public static void main(String[] args) {
 
-        CardStack cardStack = new CardStack(30);
+        CardStack deck = new CardStack(30);
+        CardStack hand = new CardStack(30);
+        CardStack graveyard = new CardStack(30);
+
         List<Card> cards = new ArrayList<>(10);
 
         cards.add(new Card("DARK MAGICIAN"));
@@ -23,45 +26,56 @@ public class Main {
         cards.add(new Card("SLIFER THE SKY DRAGON"));
 
         System.out.println("\nCreating the deck...");
-        createDeck(cards, cardStack);
+        create(cards, deck);
 
         System.out.println("Shuffling the deck...");
-        shuffleDeck(cardStack.getDeck(), cardStack);
+        shuffle(deck);
 
         // Loop until no more cards are left in the deck
         int turn = 1;
-        while (cardStack.cardsInDeck() > 0) {
+        while (!deck.isEmpty()) {
             System.out.print("\n");
             System.out.println("TURN " + turn);
-            playRound(cardStack);
-            showHand(cardStack);
-            printNumberOfCards(cardStack);
+            playRound(deck, hand, graveyard);
+            System.out.print("\n");
+            show(hand);
+            System.out.print("\n");
+            print(deck, hand, graveyard);
             turn++;
         }
 
         System.out.println("\nDeck is empty...");
     }
 
-    public static void createDeck(List<Card> cards, CardStack cardStack) {
-        for (int i = 0; i < cardStack.getDeck().length; i += 10) {
-            for (int j = 0; j < cards.size(); j++) {
-                cardStack.pushDeck(cards.get(j));
+    public enum Action {
+        DRAW, DISCARD, RETRIEVE;
+
+        public static Action random() {
+            Action[] values = Action.values();
+            return values[new Random().nextInt(values.length)];
+        }
+    }
+
+    public static void create(List<Card> cards, CardStack stack) {
+        for (int i = 0; i < stack.getStack().length; i += 10) {
+            for (Card card : cards) {
+                stack.push(card);
             }
         }
     }
 
-    public static void shuffleDeck(Card[] deck, CardStack cardStack) {
+    public static void shuffle(CardStack stack) {
         Random random = new Random();
-        for (int i = 0; i < cardStack.cardsInDeck(); i++) {
-            Card temp = deck[i];
-            int randomIndex = random.nextInt(cardStack.cardsInDeck());
-            deck[i] = deck[randomIndex];
-            deck[randomIndex] = temp;
+        for (int i = 0; i < stack.getStack().length; i++) {
+            Card temp = stack.getStack()[i];
+            int randomIndex = random.nextInt(stack.getStack().length);
+            stack.getStack()[i] = stack.getStack()[randomIndex];
+            stack.getStack()[randomIndex] = temp;
         }
     }
 
-    public static void showHand(CardStack cardStack) {
-        if (cardStack.cardsInHand() == 0) {
+    public static void show(CardStack stack) {
+        if (stack.isEmpty()) {
             System.out.println("Cards currently holding: N/A");
             return;
         }
@@ -69,30 +83,91 @@ public class Main {
             System.out.println("Cards currently holding: ");
         }
 
-        for (int i = 0; i < cardStack.cardsInHand(); i++) {
-            System.out.println("[" + (i + 1) + "] " + cardStack.getHand()[i].getName());
+        for (int i = 0; i < stack.getStack().length; i++) {
+            // if card is null, return
+            if (stack.getStack()[i] == null)
+                return;
+
+            System.out.println("[" + (i + 1) + "] " + stack.getStack()[i].getName());
         }
     }
 
-    public static void printNumberOfCards(CardStack cardStack) {
-        System.out.println("Deck: " + cardStack.cardsInDeck());
-        System.out.println("Hand: " + cardStack.cardsInHand());
-        System.out.println("Graveyard: " + cardStack.cardsInGraveyard());
+    public static void print(CardStack deck, CardStack hand, CardStack graveyard) {
+        System.out.println("Deck: " + deck.remaining());
+        System.out.println("Hand: " + hand.remaining());
+        System.out.println("Graveyard: " + graveyard.remaining());
     }
 
-    public static void playRound(CardStack cardStack) {
+    public static void playRound(CardStack deck, CardStack hand, CardStack graveyard) {
         Random random = new Random();
-        int action = random.nextInt(3);
+        Action action = Action.random();
         int numberOfCards = random.nextInt(5) + 1;
-        if (action == 0) {
-            System.out.println("Drawing " + numberOfCards + " card/s from the deck...");
-            cardStack.draw(numberOfCards);
-        } else if (action == 1) {
-            System.out.println("Discarding " + numberOfCards + " card/s from the hand...");
-            cardStack.discard(numberOfCards);
-        } else if (action == 2) {
-            System.out.println("Retrieving " + numberOfCards + " card/s from the graveyard...");
-            cardStack.retrieve(numberOfCards);
+        switch(action) {
+            case DRAW:
+                if (deck.remaining() == 0) {
+                    System.out.println("Unable to draw... Deck is empty.");
+                }
+                else if (numberOfCards > deck.remaining()) {
+                    int newNumber = deck.remaining();
+                    System.out.println("Unable to draw " + numberOfCards + " cards from the deck... " +
+                                        "Drawing " + newNumber + " card/s instead...");
+                    cardAction(deck, hand, newNumber, action);
+                }
+                else {
+                    System.out.println("Drawing " + numberOfCards + " card/s from the deck...");
+                    cardAction(deck, hand, numberOfCards, action);
+                }
+                break;
+            case DISCARD:
+                if (hand.remaining() == 0) {
+                    System.out.println("Unable to discard... Hand is empty.");
+                }
+                else if (numberOfCards > hand.remaining()) {
+                    int newNumber = hand.remaining();
+                    System.out.println("Unable to discard " + numberOfCards + " cards from the hand... " +
+                                        "Discarding " + newNumber + " card/s instead...");
+                    cardAction(hand, graveyard, newNumber, action);
+                }
+                else {
+                    System.out.println("Discarding " + numberOfCards + " card/s from the hand...");
+                    cardAction(hand, graveyard, numberOfCards, action);
+                }
+                break;
+            case RETRIEVE:
+                if (graveyard.remaining() == 0) {
+                    System.out.println("Unable to retrieve... Graveyard is empty.");
+                }
+                else if (numberOfCards > graveyard.remaining()) {
+                    int newNumber = graveyard.remaining();
+                    System.out.println("Unable to retrieve " + numberOfCards + " cards from the graveyard... " +
+                                        "Retrieving " + newNumber + " card/s instead...");
+                    cardAction(graveyard, hand, newNumber, action);
+                }
+                else {
+                    System.out.println("Retrieving " + numberOfCards + " card/s from the graveyard...");
+                    cardAction(graveyard, hand, numberOfCards, action);
+                }
+                break;
+        }
+    }
+
+    public static void cardAction(CardStack stack1, CardStack stack2, int numberOfCards, Action action) {
+        for (int i = 0; i < numberOfCards; i++) {
+            Card card = stack1.peek();
+            stack1.pop();
+            stack2.push(card);
+
+            switch(action) {
+                case DRAW:
+                    System.out.println("Drawn " + card.getName());
+                    break;
+                case DISCARD:
+                    System.out.println("Discarded " + card.getName());
+                    break;
+                case RETRIEVE:
+                    System.out.println("Retrieved " + card.getName());
+                    break;
+            }
         }
     }
 }

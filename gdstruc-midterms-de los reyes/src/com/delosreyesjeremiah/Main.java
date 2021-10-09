@@ -3,10 +3,12 @@ package com.delosreyesjeremiah;
 import java.util.Random;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 public class Main {
 
     public static void main(String[] args) {
+        Scanner pause = new Scanner(System.in);
 
         CardStack deck = new CardStack(30);
         CardStack hand = new CardStack(30);
@@ -34,7 +36,7 @@ public class Main {
         // Loop until no more cards are left in the deck
         int turn = 1;
         while (!deck.isEmpty()) {
-            System.out.print("\n");
+            pause.nextLine();
             System.out.println("TURN " + turn);
             playRound(deck, hand, graveyard);
             System.out.print("\n");
